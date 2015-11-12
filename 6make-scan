@@ -27,6 +27,7 @@ my %registry = @$files.race.map: {
     my ($repo, $path) = .split('/lib/', 2);
     my $name = $path.subst(/\.pm6?$/, '').subst(:g, '/', '::');
     my $deps = .IO.lines.map({
+        next if /^'=begin pod'/ ff /^'=end pod'/;
         when /^\h*[use|need]\h+([\w+]+ % '::')/ { ~$0 }
         default { Empty }
     }).grep(none @builtins);
