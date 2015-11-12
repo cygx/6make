@@ -1,6 +1,7 @@
 # 6make
 
-Precompiles Perl6 modules.
+Precompiles Perl6 modules via GNU `make`. It currently also depends on `find`
+and `wget`.
 
 Example commands for installing `JSON::Tiny`:
 
