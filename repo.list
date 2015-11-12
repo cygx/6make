@@ -1,0 +1,11 @@
+compress-zlib           git@github.com:retupmoca/P6-Compress-Zlib.git
+compress-zlib-raw       git@github.com:retupmoca/P6-Compress-Zlib-Raw.git
+file-directory-tree     git@github.com:labster/p6-file-directory-tree.git
+file-temp               git@github.com:perlpilot/p6-File-Temp.git
+find-bundled            git@github.com:retupmoca/P6-Find-Bundled.git
+image-png-inflated      git@github.com:cygx/p6-image-png-inflated.git
+image-png-portable      git@github.com:raydiak/Image-PNG-Portable.git
+image-rgba-text         git@github.com:cygx/p6-image-rgba-text.git
+slang-tuxic             git@github.com:FROGGS/p6-Slang-Tuxic.git
+string-crc32            git@github.com:cosimo/perl6-string-crc32.git
+text-csv                git@github.com:Tux/CSV.git

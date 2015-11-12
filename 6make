@@ -1,0 +1,79 @@
+#!/usr/bin/env perl6
+
+class PM {
+    has $.name;
+    has $.repo;
+    has $.path;
+    has @.deps;
+}
+
+my @builtins = <v6 nqp Text NativeCall NQPHLL>;
+my @repos = 'repo.list'.IO.lines.map({ [ .split(/\h+/, 2) ] });
+my %registry;
+
+sub find-files($_) {
+    run('find', "$_/lib", '-type', 'f', :out).out.slurp-rest.lines;
+}
+
+my $files = @repos.map(*.[0])
+    . grep(*.IO.d)
+    . map({ |find-files $_ })
+    . grep(/\.pm6?$/);
+
+for @$files {
+    my ($repo, $path) = .split('/lib/', 2);
+    my $name = $path.subst(/\.pm6?$/, '').subst(:g, '/', '::');
+    my $deps = .IO.lines.map({
+        when /^\h*[use|need]\h+(<-[\s\;]>+)/ {
+            (~$0).subst(/<!after [\:]>':'<-[\:]>.*/, '');
+        }
+        default { Empty }
+    }).grep(none @builtins);
+
+    %registry{$name} = PM.new(:$name, :$repo, :$path, :$deps);
+}
+
+'Makefile'.IO.spurt: qq:to/__END__/;
+COMPILE = perl6 -Iblib --target=mbc --output=\$@ \$<
+PULL    = git -C \$^ pull
+CLONE   = git clone \$(URL) \$@
+
+REPOS := { @repos>>.[0].join(' ') }
+BC := { %registry.values>>.path.map({ "blib/$_.moarvm" }).join(' ') }
+
+bc: \$(BC)
+\$(BC):
+\t@mkdir -p \$(dir \$@)
+\t\$(COMPILE)
+
+pull: \$(REPOS:\%=pull-%)
+\$(REPOS:\%=pull-%): pull-%: %
+\t\$(PULL)
+
+clean:; rm -rf blib
+
+6:; ./6make
+
+{
+    join "\n", do for @repos -> [ $name, $url ] {
+        "$name: URL = $url",
+        "$name:; \$(CLONE)\n";
+    }
+}
+{
+    join "\n", do for %registry.values {
+        my $pm = $_;
+        my $deps = .deps ?? .deps.map({
+            if %registry{$_} {
+                "blib/{%registry{$_}.path}.moarvm";
+            }
+            else {
+                note "unsatisfied dep $_ for {$pm.name}";
+                '';
+            }
+        }).join(' ') !! '';
+
+        "blib/{.path}.moarvm: blib/\%.moarvm: {.repo}/lib/% $deps";
+    }
+}
+__END__
