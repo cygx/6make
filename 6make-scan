@@ -9,7 +9,7 @@ class PM {
     has @.deps;
 }
 
-my @builtins = <v6 nqp MONKEY-TYPING Text NativeCall NQPHLL>;
+my @builtins = <v6 nqp MONKEY-TYPING Test NativeCall NQPHLL>;
 my @repos = 'repo.list'.IO.lines.map({ [ .split(/\h+/, 2) ] });
 my %registry;
 
