@@ -7,7 +7,7 @@ class PM {
     has @.deps;
 }
 
-my @builtins = <v6 nqp Text NativeCall NQPHLL>;
+my @builtins = <v6 nqp MONKEY-TYPING Text NativeCall NQPHLL>;
 my @repos = 'repo.list'.IO.lines.map({ [ .split(/\h+/, 2) ] });
 my %registry;
 
@@ -24,9 +24,7 @@ for @$files {
     my ($repo, $path) = .split('/lib/', 2);
     my $name = $path.subst(/\.pm6?$/, '').subst(:g, '/', '::');
     my $deps = .IO.lines.map({
-        when /^\h*[use|need]\h+(<-[\s\;]>+)/ {
-            (~$0).subst(/<!after [\:]>':'<-[\:]>.*/, '');
-        }
+        when /^\h*[use|need]\h+([\w+]+ % '::')/ { ~$0 }
         default { Empty }
     }).grep(none @builtins);
 
