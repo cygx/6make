@@ -1,14 +1,32 @@
 #!/usr/bin/env perl6
 
+$*CWD = $?FILE.IO.parent;
+
 my $ECOSYSTEM :=
     'https://raw.githubusercontent.com/perl6/ecosystem/master/META.list';
 
+my $batching = False;
+
 proto MAIN(|) {
     {*}
-    EVALFILE $?FILE ~ '-' ~ @*ARGS.shift;
+
+    if $batching {
+        my &get := EVALFILE '6make-get.plugin';
+        @*ARGS.append(get(@*ARGS.pop).lines);
+    }
+
+    EVALFILE '6make-' ~ @*ARGS.shift;
 }
 
 multi MAIN('scan') {}
-multi MAIN('add', *@META-URL) {}
-multi MAIN('add-list', $LIST-URL) {}
-multi MAIN('add-ecosystem') { @*ARGS = <<add-list "$ECOSYSTEM">> }
+multi MAIN('add', *@METAINFO) {}
+
+multi MAIN('add', $LIST, Bool :$batch!) {
+    $batching = True;
+    @*ARGS.shift;
+}
+
+multi MAIN('ecosync') {
+    $batching = True;
+    @*ARGS = 'add', $ECOSYSTEM;
+}

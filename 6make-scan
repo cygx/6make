@@ -49,9 +49,9 @@ pull: \$(REPOS:\%=pull-%)
 \$(REPOS:\%=pull-%):
 \t\$(PULL)
 
-all: pull
+upgrade: pull
 \t./6make-scan
-\t\$(MAKE) --no-print-directory bc
+\t@\$(MAKE) --no-print-directory bc
 
 clean:; rm -rf blib
 
