@@ -10,14 +10,17 @@ class PM {
 }
 
 my @builtins = <v6 nqp MONKEY-TYPING Test NativeCall NQPHLL>;
-my @repos = 'repo.list'.IO.lines.map({ [ .split(/\h+/, 2) ] });
-my %registry;
 
+say '...reading repo.list';
+my @repos = 'repo.list'.IO.lines.map({ [ .split(/\h+/, 2) ] });
+
+say '...looking for modules';
 my $files = @repos.map(*.[0])
     . grep({ "$_/lib".IO.d })
     . map: { |find(:f, "$_/lib", <*.pm *.pm6>) }
 
-for @$files {
+say '...parsing modules';
+my %registry = race for @$files {
     my ($repo, $path) = .split('/lib/', 2);
     my $name = $path.subst(/\.pm6?$/, '').subst(:g, '/', '::');
     my $deps = .IO.lines.map({
@@ -25,9 +28,10 @@ for @$files {
         default { Empty }
     }).grep(none @builtins);
 
-    %registry{$name} = PM.new(:$name, :$repo, :$path, :$deps);
+    $name => PM.new(:$name, :$repo, :$path, :$deps);
 }
 
+say '...writing Makefile';
 'Makefile'.IO.spurt: qq:to/__END__/;
 COMPILE = perl6 -Iblib --target=mbc --output=\$@ \$<
 PULL    = git -C \$(patsubst pull-%,%,\$@) pull
@@ -76,3 +80,5 @@ clean:; rm -rf blib
     }
 }
 __END__
+
+say 'done.';
