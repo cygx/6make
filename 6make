@@ -33,10 +33,10 @@ for @$files {
 
 'Makefile'.IO.spurt: qq:to/__END__/;
 COMPILE = perl6 -Iblib --target=mbc --output=\$@ \$<
-PULL    = git -C \$^ pull
+PULL    = git -C \$(patsubst pull-%,%,\$@) pull
 CLONE   = git clone \$(URL) \$@
 
-REPOS := { @repos>>.[0].join(' ') }
+REPOS := \$(wildcard { @repos>>.[0].join(' ') })
 BC := { %registry.values>>.path.map({ "blib/$_.moarvm" }).join(' ') }
 
 bc: \$(BC)
@@ -45,8 +45,12 @@ bc: \$(BC)
 \t\$(COMPILE)
 
 pull: \$(REPOS:\%=pull-%)
-\$(REPOS:\%=pull-%): pull-%: %
+\$(REPOS:\%=pull-%):
 \t\$(PULL)
+
+all: pull
+\t./6make
+\t\$(MAKE) --no-print-directory bc
 
 clean:; rm -rf blib
 
