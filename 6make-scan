@@ -20,7 +20,7 @@ my $files = @repos.map(*.[0])
     . map: { |find(:f, "$_/lib", <*.pm *.pm6>) }
 
 say '...parsing modules';
-my %registry = race for @$files {
+my %registry = @$files.race.map: {
     my ($repo, $path) = .split('/lib/', 2);
     my $name = $path.subst(/\.pm6?$/, '').subst(:g, '/', '::');
     my $deps = .IO.lines.map({
