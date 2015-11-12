@@ -1,81 +1,14 @@
 #!/usr/bin/env perl6
 
-class PM {
-    has $.name;
-    has $.repo;
-    has $.path;
-    has @.deps;
+my $ECOSYSTEM :=
+    'https://raw.githubusercontent.com/perl6/ecosystem/master/META.list';
+
+proto MAIN(|) {
+    {*}
+    EVALFILE $?FILE ~ '-' ~ @*ARGS.shift;
 }
 
-my @builtins = <v6 nqp MONKEY-TYPING Text NativeCall NQPHLL>;
-my @repos = 'repo.list'.IO.lines.map({ [ .split(/\h+/, 2) ] });
-my %registry;
-
-sub find-files($_) {
-    run('find', "$_/lib", '-type', 'f', :out).out.slurp-rest.lines;
-}
-
-my $files = @repos.map(*.[0])
-    . grep(*.IO.d)
-    . map({ |find-files $_ })
-    . grep(/\.pm6?$/);
-
-for @$files {
-    my ($repo, $path) = .split('/lib/', 2);
-    my $name = $path.subst(/\.pm6?$/, '').subst(:g, '/', '::');
-    my $deps = .IO.lines.map({
-        when /^\h*[use|need]\h+([\w+]+ % '::')/ { ~$0 }
-        default { Empty }
-    }).grep(none @builtins);
-
-    %registry{$name} = PM.new(:$name, :$repo, :$path, :$deps);
-}
-
-'Makefile'.IO.spurt: qq:to/__END__/;
-COMPILE = perl6 -Iblib --target=mbc --output=\$@ \$<
-PULL    = git -C \$(patsubst pull-%,%,\$@) pull
-CLONE   = git clone \$(URL) \$@
-
-REPOS := \$(wildcard { @repos>>.[0].join(' ') })
-BC := { %registry.values>>.path.map({ "blib/$_.moarvm" }).join(' ') }
-
-bc: \$(BC)
-\$(BC):
-\t@mkdir -p \$(dir \$@)
-\t\$(COMPILE)
-
-pull: \$(REPOS:\%=pull-%)
-\$(REPOS:\%=pull-%):
-\t\$(PULL)
-
-all: pull
-\t./6make
-\t\$(MAKE) --no-print-directory bc
-
-clean:; rm -rf blib
-
-6:; ./6make
-
-{
-    join "\n", do for @repos -> [ $name, $url ] {
-        "$name: URL = $url",
-        "$name:; \$(CLONE)\n";
-    }
-}
-{
-    join "\n", do for %registry.values {
-        my $pm = $_;
-        my $deps = .deps ?? .deps.map({
-            if %registry{$_} {
-                "blib/{%registry{$_}.path}.moarvm";
-            }
-            else {
-                note "unsatisfied dep $_ for {$pm.name}";
-                '';
-            }
-        }).join(' ') !! '';
-
-        "blib/{.path}.moarvm: blib/\%.moarvm: {.repo}/lib/% $deps";
-    }
-}
-__END__
+multi MAIN('scan') {}
+multi MAIN('add', *@META-URL) {}
+multi MAIN('add-list', $LIST-URL) {}
+multi MAIN('add-ecosystem') { @*ARGS = <<add-list "$ECOSYSTEM">> }

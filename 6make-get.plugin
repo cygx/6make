@@ -1,0 +1,10 @@
+sub wget($_) {
+    run('wget', '-qO-', $_, :out).out.slurp-rest(:enc<latin1>);
+}
+
+sub get($_) {
+    when /^https?\:/ { .&wget }
+    default { .IO }
+}
+
+&get;
