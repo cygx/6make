@@ -1,5 +1,8 @@
 #!/usr/bin/env perl6
 
+LEAVE $*CWD = INIT $*CWD;
+$*CWD = $*SIXMAKE-DIR // $?FILE.IO.parent.abspath;
+
 my &find := EVALFILE('6make-find.plugin');
 
 class PM {

@@ -1,12 +1,13 @@
 #!/usr/bin/env perl6
 
-my &get := EVALFILE('6make-get.plugin');
+my $DIR := $*SIXMAKE-DIR // $?FILE.IO.parent.abspath;
+my &get := EVALFILE("$DIR/6make-get.plugin");
 
 sub parse($key) {
     rx/^ <[\h\,\{\}]>* '"' $key '"' \h* ':' \h* '"' (<-["]>*) '"' /
 }
 
-my %repos = 'repo.list'.IO.lines.map({ |.split(/\h+/, 2) });
+my %repos = "$DIR/repo.list".IO.lines.map({ |.split(/\h+/, 2) });
 my @failures;
 
 my $n = 0;
@@ -37,4 +38,4 @@ if @failures {
 my @keys = %repos.keys.sort;
 my $ws = @keys>>.chars.max + 1;
 my $lines = @keys.map({ [~] $_, ' ' x ($ws - .chars), %repos{$_}, "\n" });
-'repo.list'.IO.spurt($lines.join);
+"$DIR/repo.list".IO.spurt($lines.join);
