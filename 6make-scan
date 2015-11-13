@@ -65,11 +65,13 @@ log-start 'writing Makefile';
 my @missing;
 'Makefile'.IO.spurt: qq:to/__END__/;
 COMPILE = perl6 -Iblib --target=mbc --output=\$@ \$<
-PULL    = git -C \$(patsubst pull-%,%,\$@) pull
+TEST    = cd \$<; prove -r \$(PROVEFLAGS) -e 'perl6 -I../blib' t/
+PULL    = git -C \$< pull
 CLONE   = git clone \$(URL) \$@
 
 REPOS := \$(wildcard { @repos>>.[0].join(' ') })
 BC := { %registry.values>>.path.map({ "blib/$_.moarvm" }).join(' ') }
+TESTTARGETS := \$(patsubst %/t/,t-%,\$(wildcard \$(REPOS:%=%/t/)))
 
 bc: \$(BC)
 \$(BC):
@@ -77,8 +79,18 @@ bc: \$(BC)
 \t\$(COMPILE)
 
 pull: \$(REPOS:\%=pull-%)
-\$(REPOS:\%=pull-%):
+\$(REPOS:\%=pull-%): pull-%: %
 \t\$(PULL)
+
+.PHONY: __PHONY__
+__PHONY__:
+
+fulltest:; @\$(MAKE) --no-print-directory -k PROVEFLAGS=-Q \$(TESTTARGETS)
+\$(TESTTARGETS): t-%: % __PHONY__
+\t@echo
+\t@echo "    --- TESTING \$< ---"
+\t@echo
+\t\$(TEST)
 
 clean:; rm -rf blib
 
