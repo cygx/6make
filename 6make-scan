@@ -1,5 +1,22 @@
 #!/usr/bin/env perl6
 
+my $start = BEGIN now;
+my $end;
+
+sub log-start($info) {
+    print "    $info...", (' ' x (20 - $info.chars));
+    $start //= now;
+}
+
+sub log-end {
+    $end = now;
+    printf "[ %5.2fs ]\n", $end - $start;
+    $start = Nil;
+}
+
+log-start 'script startup';
+log-end;
+
 LEAVE $*CWD = INIT $*CWD;
 $*CWD = $*SIXMAKE-DIR // $?FILE.IO.parent.abspath;
 
@@ -14,15 +31,17 @@ class PM {
 
 my @builtins = <v6 nqp MONKEY-TYPING Test NativeCall NQPHLL>;
 
-say '    reading repo.list';
+log-start 'reading repo.list';
 my @repos = 'repo.list'.IO.lines.map({ [ .split(/\h+/, 2) ] });
+log-end;
 
-say '    looking for modules';
+log-start 'looking for modules';
 my $files = @repos.map(*.[0])
     . grep({ "$_/lib".IO.d })
     . map: { |find(:f, "$_/lib", <*.pm *.pm6>) }
+log-end;
 
-say '    parsing modules';
+log-start 'parsing modules';
 my %registry = @$files.race.map: {
     my ($repo, $path) = .split('/lib/', 2);
     my $name = $path.subst(/\.pm6?$/, '').subst(:g, '/', '::');
@@ -34,10 +53,10 @@ my %registry = @$files.race.map: {
 
     $name => PM.new(:$name, :$repo, :$path, :$deps);
 }
+log-end;
 
-my $missing = False;
-
-say '    writing Makefile';
+log-start 'writing Makefile';
+my @missing;
 'Makefile'.IO.spurt: qq:to/__END__/;
 COMPILE = perl6 -Iblib --target=mbc --output=\$@ \$<
 PULL    = git -C \$(patsubst pull-%,%,\$@) pull
@@ -76,8 +95,7 @@ scan:; ./6make-scan
                 "blib/{%registry{$_}.path}.moarvm";
             }
             else {
-                $missing = True;
-                note "missing dependency $_ for {$pm.name}";
+                @missing.push($($_, $pm.name));
                 '';
             }
         }).join(' ') !! '';
@@ -86,5 +104,11 @@ scan:; ./6make-scan
     }
 }
 __END__
+log-end;
 
-exit +$missing;
+if @missing {
+    print "\n";
+    note "missing dependency {.[0]} for {.[1]}" for @missing;
+    print "\n";
+    exit 1;
+}
