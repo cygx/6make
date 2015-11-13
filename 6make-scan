@@ -35,14 +35,13 @@ log-start 'reading repo.list';
 my @repos = 'repo.list'.IO.lines.map({ [ .comb(/\H+/) ] });
 log-end;
 
-log-start 'looking for modules';
-my $files = @repos.map(*.[0])
-    . grep({ "$_/lib".IO.d })
-    . map: { |find(:f, "$_/lib", <*.pm *.pm6>) }
+log-start 'finding modules';
+my @libdirs = @repos.map({ "{.[0]}/lib" });
+my @modules = find(:noerr, :f, :name<*.pm *.pm6>, @libdirs);
 log-end;
 
 log-start 'parsing modules';
-my %registry = @$files.race.map: {
+my %registry = @modules.map: {
     my ($repo, $path) = .split('/lib/', 2);
     my $name = $path.subst(/\.pm6?$/, '').subst(:g, '/', '::');
     my $deps = .IO.lines.map({

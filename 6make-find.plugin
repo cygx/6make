@@ -1,8 +1,9 @@
-sub find($path, *@patterns, Bool :$f) {
-    run('find', $path, |$_, :out).out.slurp-rest.lines given [
+sub find(*@paths, :$name, Bool :$f, Bool :$noerr) {
+    my $err = $noerr ?? $*SPEC.devnull !! '-';
+    run('find', |@paths, |$_, :out, :$err).out.slurp-rest.lines given [
         |($f ?? <-type f> !! Empty),
-        |(@patterns and
-            '\(', |@patterns.map({ slip <<-o -name "$_">> }).[1..*], '\)')
+        |(@$name and
+            '\(', |@$name.map({ slip <<-o -name "$_">> }).[1..*], '\)')
     ];
 }
 
