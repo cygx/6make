@@ -1,32 +1,52 @@
 #!/usr/bin/env perl6
 
-my $*SIXMAKE-DIR = $?FILE.IO.parent.abspath;
-my $ECOSYSTEM :=
-    'https://raw.githubusercontent.com/perl6/ecosystem/master/META.list';
+note "loaded script in { (now - BEGIN now).round(0.01) }s";
 
-my $batching = False;
+BEGIN {
+    if @*ARGS[0] eq 'init' {
+        try open('repo.list', :x).?close;
+        try open('eco.list', :x).?close;
+        shell 'perl6 --target=mbc --output=_6make.pm6.moarvm _6make.pm6';
+        exit;
+    }
+}
 
 proto MAIN(|) {
     {*}
 
-    if $batching {
-        my &get := EVALFILE "{$?FILE}-get.plugin";
-        @*ARGS.append(get(@*ARGS.pop).lines);
-    }
+    use lib $?FILE.IO.parent.abspath;
+    use _6make;
 
     my $cmd = @*ARGS.shift;
-    EVALFILE "{$?FILE}-$cmd";
+    _6make."$cmd"(|@*ARGS);
 }
 
+#| compile 6make and create empty data files as necessary
+multi MAIN('init') {}
+
+#| sync repo.list with the ecosystem
+multi MAIN('ecosync') {}
+
+#| scan repositories and build bytecode
+multi MAIN() { @*ARGS.unshift('rebuild') }
+
+#| only scan repositories (but don't build bytecode)
 multi MAIN('scan') {}
-multi MAIN('add', *@METAINFO) {}
 
-multi MAIN('add', $LIST, Bool :$batch!) {
-    $batching = True;
-    @*ARGS.shift;
-}
+#| only build bytecode (but don't scan repositories)
+multi MAIN('bc') {}
 
-multi MAIN('ecosync') {
-    $batching = True;
-    @*ARGS = 'add', $ECOSYSTEM;
-}
+#| add repository at URL as NAME
+multi MAIN('add', Str $NAME, Str $URL) {}
+
+#| clone or pull repositories via git
+multi MAIN('get', *@REPO) {}
+
+#| run tests in repositories if available
+multi MAIN('test', *@REPO) {}
+
+#| update all installed repositories and rebuild
+multi MAIN('upgrade') {}
+
+#| remove bytecode directory
+multi MAIN('nuke') {}
