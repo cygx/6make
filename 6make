@@ -2,51 +2,14 @@
 
 note "loaded script in { (now - BEGIN now).round(0.01) }s";
 
-BEGIN {
-    if @*ARGS[0] eq 'init' {
-        try open('repo.list', :x).?close;
-        try open('eco.list', :x).?close;
-        shell 'perl6 --target=mbc --output=_6make.pm6.moarvm _6make.pm6';
-        exit;
-    }
+my constant $DIR = $?FILE.IO.parent.abspath;
+my constant $PM = "$DIR/_6make.pm6";
+my constant $BC = "$PM.moarvm";
+
+BEGIN if !$BC.IO.f || $PM.IO.modified > $BC.IO.modified {
+    %*ENV<SIXMAKEDIR> = $DIR;
+    shell "perl6 --target=mbc --output=$BC $PM";
 }
 
-proto MAIN(|) {
-    {*}
-
-    use lib $?FILE.IO.parent.abspath;
-    use _6make;
-
-    my $cmd = @*ARGS.shift;
-    _6make."$cmd"(|@*ARGS);
-}
-
-#| compile 6make and create empty data files as necessary
-multi MAIN('init') {}
-
-#| sync repo.list with the ecosystem
-multi MAIN('ecosync') {}
-
-#| scan repositories and build bytecode
-multi MAIN() { @*ARGS.unshift('rebuild') }
-
-#| only scan repositories (but don't build bytecode)
-multi MAIN('scan') {}
-
-#| only build bytecode (but don't scan repositories)
-multi MAIN('bc') {}
-
-#| add repository at URL as NAME
-multi MAIN('add', Str $NAME, Str $URL) {}
-
-#| clone or pull repositories via git
-multi MAIN('get', *@REPO) {}
-
-#| run tests in repositories if available
-multi MAIN('test', *@REPO) {}
-
-#| update all installed repositories and rebuild
-multi MAIN('upgrade') {}
-
-#| remove bytecode directory
-multi MAIN('nuke') {}
+use lib $DIR;
+use _6make;

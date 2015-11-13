@@ -1,12 +1,19 @@
-unit class _6make is export;
+use nqp;
 
-my constant $DIR = $?FILE.IO.parent.abspath;
+proto MAIN(|) is export {*}
+
+my constant $DIR = %*ENV<SIXMAKEDIR>;
+my constant $DEVNULL = $*SPEC.devnull;
 my constant $ECOSYSTEM =
     'https://raw.githubusercontent.com/perl6/ecosystem/master/META.list';
 
-sub rm(*@files, Bool :$rf) { run 'rm', |($rf ?? '-rf' !! Empty), @files }
-sub git(*@args) { run 'git', @args }
-sub make(*@targets) { run 'make', @targets }
+my class PM {
+    has $.name;
+    has $.repo;
+    has $.path;
+    has @.deps;
+}
+
 sub wget($_) { run('wget', '-qO-', $_, :out).out.slurp-rest(:enc<latin1>) }
 
 sub fetch($_) {
@@ -14,122 +21,243 @@ sub fetch($_) {
     default { .IO }
 }
 
-sub find(*@paths, :$name, Bool :$f, Bool :$noerr) {
-    my $err = $noerr ?? $*SPEC.devnull !! '-';
-    run('find', |@paths, |$_, :out, :$err).out.slurp-rest.lines given [
-        |($f ?? <-type f> !! Empty),
-        |(@$name and
-            '\(', |@$name.map({ slip <<-o -name "$_">> }).[1..*], '\)')
-    ];
-}
-
-sub repos {
-    once {
-        ENTER my $start = now;
-        LEAVE note "loaded repo.list in { (now - $start).round(0.01) }s";
-        "$DIR/repo.list".IO.lines.map({ |.comb(/\H+/).[0, 1] }).Hash;
-    }
-}
-
-sub ecosystem {
-    once {
-        ENTER my $start = now;
-        LEAVE note "parsed eco.list in { (now - $start).round(0.01) }s";
-        "$DIR/eco.list".IO.lines.SetHash;
-    }
-}
-
-sub dump-repos {
+sub load-repolist($_ = "$DIR/repo.list") {
     ENTER my $start = now;
-    LEAVE note "dumped repo.list in { (now - $start).round(0.01) }s";
-    my @keys = repos.keys.sort;
+    LEAVE note "loaded repolist in { round now - $start, .01 }s";
+    .IO.lines.map({ |.comb(/\H+/).[0, 1] }).Hash
+}
+
+sub load-ecolist($_ = "$DIR/eco.list") {
+    ENTER my $start = now;
+    LEAVE note "loaded ecolist in { round now - $start, .01 }s";
+    .IO.lines.SetHash;
+}
+
+sub libdirs(%repos) { %repos.keys.map({ "$_/lib" }) }
+
+sub find-modules(@dirs) {
+    ENTER my $start = now;
+    LEAVE note "found modules in { round now - $start, .01 }s";
+    qqx{find @dirs[] -type f \\( -name '*.pm' -o -name '*.pm6' \\) 2>$DEVNULL}
+        . lines;
+}
+
+sub parse-modules(@files) {
+    ENTER my $start = now;
+    LEAVE note "parsed modules in { round now - $start, .01 }s";
+
+    my % = @files.map: -> $pm {
+        my ($repo, $path) = $pm.split('/lib/', 2);
+        my $name = $path.subst(/\.pm6?$/, '').subst(:g, '/', '::');
+
+        my @deps;
+        my $fh := nqp::open(nqp::unbox_s($pm), 'r');
+        repeat until nqp::eoffh($fh) {
+            $_ := nqp::readlinefh($fh);
+            if (not .starts-with('=begin pod') ff .starts-with('=end pod'))
+                && /^\h*[use|need]\h+([\w+]+ % '::')/ {
+                my $dep := ~$0;
+                @deps.push($dep) unless $dep ~~ any
+                    BEGIN <v6 nqp MONKEY-TYPING Test NativeCall NQPHLL>;
+            }
+        }
+
+        $name => PM.new(:$name, :$repo, :$path, :@deps);
+    }
+}
+
+sub dump-makefile($_ = "$DIR/Makefile", :%pms!, :@missing) {
+    ENTER my $start = now;
+    LEAVE note "generated Makefile in { (now - $start).round(0.01) }s";
+
+    .IO.spurt: qq:to/__END__/;
+BC := { %pms.values>>.path.map({ ".blib/$_.moarvm" }).join(' ') }
+
+bc: \$(BC)
+\$(BC):
+\t@mkdir -p \$(dir \$@)
+\tperl6 -I.blib --target=mbc --output=\$@ \$<
+
+{
+    join "\n", do for %pms.values {
+        my $pm = $_;
+        my $deps = .deps ?? .deps.map({
+            if %pms{$_} -> $_ {
+                ".blib/{.path}.moarvm";
+            }
+            else {
+                @missing.push(($_, $pm.name));
+                '';
+            }
+        }).join(' ') !! '';
+
+        ".blib/{.path}.moarvm: .blib/\%.moarvm: {.repo}/lib/% $deps";
+    }
+}
+__END__
+}
+
+sub dump-repolist($_ = "$DIR/repo.list", :%repos!) {
+    ENTER my $start = now;
+    LEAVE note "generated repolist in { (now - $start).round(0.01) }s";
+
+    my @keys = %repos.keys.sort;
     my $ws = @keys>>.chars.max + 1;
-    my $lines = @keys.map({ [~] $_, ' ' x ($ws - .chars), repos{$_}, "\n" });
-    "$DIR/repo.list".IO.spurt($lines.join);
+    my $lines = @keys.map({ [~] $_, ' ' x ($ws - .chars), %repos{$_}, "\n" });
+    .IO.spurt($lines.join);
 }
 
-sub dump-ecosystem {
+
+sub dump-ecolist($_ = "$DIR/eco.list", :%ecos!) {
     ENTER my $start = now;
-    LEAVE note "dumped eco.list in { (now - $start).round(0.01) }s";
-    "$DIR/eco.list".IO.spurt(ecosystem.keys.map({ "$_\n" }).join);
+    LEAVE note "generated ecolist in { (now - $start).round(0.01) }s";
+    .IO.spurt(%ecos.keys.map({ "$_\n" }).join);
 }
 
 sub parse-meta($key) {
     rx/ '"' $key '"' \h* ':' \h* '"' (<-["]>*) '"' /
 }
 
-method nuke { rm :rf, 'blib' }
-
-method get(*@_) {
-    for @_ {
-        if .IO.d { git '-C', $_, 'pull' }
-        else { git 'clone', (repos{$_} // die), $_ }
+sub repos {
+    once {
+        try open("$DIR/repo.list", :x).?close;
+        load-repolist;
     }
 }
 
-method add($name, $url) {
-    my $repo = $name.lc.subst(:g, '::', '-');
-    say "normalized name to '$repo'" if $repo ne $name;
-    my $former-url = repos{$repo};
-    if !defined $former-url {}
-    elsif $former-url eq $url {
-        say "repository '$repo' is already known under that address";
-        return;
+sub ecos {
+    once {
+        try open("$DIR/eco.list", :x).?close;
+        load-ecolist;
     }
-    else {
-        say "former address was <$former-url>";
-        repos{$repo} = $url;
-    }
-
-    dump-repos;
-    say "added '$repo' to repo.list";
 }
 
-method ecosync {
+sub pms { once parse-modules find-modules libdirs repos }
+
+#| an alias for the 'build' subcommand
+multi MAIN { MAIN 'build' }
+
+#| sync repo.list and eco.list with the ecosystem
+multi MAIN('ecosync') {
     my @lines = fetch($ECOSYSTEM).lines;
     my @failures;
     my $n = 0;
     my $N = +@lines;
     my $skipped = 0;
 
-    repos, ecosystem;
+    repos, ecos;
 
     for @lines -> $target {
         ++$n;
-
-        if ecosystem{$target}:exists {
+        if ecos{$target}:exists {
             ++$skipped;
             next;
         }
-
         my ($name, $url);
         for fetch($target).lines {
             $name = ~$0 if (BEGIN parse-meta 'name');
             $url = ~$0 if (BEGIN parse-meta 'source-url');
         }
-
         if $name && $url {
             my $repo = $name.lc.subst(:g, '::', '-');
             say "    $n/$N $name => $repo";
             repos{$repo} = $url;
-            ecosystem{$target} = True;
+            ecos{$target} = True;
         }
         else {
             @failures.push($target);
             say "X $target";
         }
     }
-
     say '';
-
     say "skipped $skipped already known entries"
         if $skipped;
-
     if @failures {
         say "the following entries failed to parse:";
         .say for @failures;
     }
-
-    dump-repos;
-    dump-ecosystem;
+    dump-repolist(repos => repos);
+    dump-ecolist(ecos => ecos);
 }
+
+#| scan repositories and compile to bytecode
+multi MAIN('rebuild') {
+    MAIN 'scan';
+    MAIN 'build';
+}
+
+#| only scan repositories (but don't compile to bytecode)
+multi MAIN('scan') {
+    my @missing;
+    dump-makefile :pms(pms), :@missing;
+    for @missing {
+        say "missing dependency {.[0]} for {.[1]}"
+    }
+}
+
+#| only compile to bytecode (but don't scan repositories)
+multi MAIN('build') { run 'make', '-C', $DIR, '--no-print-directory' }
+
+#| add repository at URL as NAME
+multi MAIN('add', Str $NAME, Str $URL) {
+    my $repo = $NAME.lc.subst(:g, '::', '-');
+    say "normalized name to '$repo'" if $repo ne $NAME;
+    my $former-url = repos{$repo};
+
+    if !defined $former-url {
+        repos{$repo} = $URL;
+    }
+    elsif $former-url eq $URL {
+        say "repository '$repo' is already known under that address";
+        return;
+    }
+    else {
+        say "former address was <$former-url>";
+        repos{$repo} = $URL;
+    }
+
+    dump-repolist :repos(repos);
+    say "repository '$repo' has been added";
+}
+
+#| clone or pull repositories via git
+multi MAIN('get', *@REPO) {
+    for @REPO {
+        if .IO.d { run 'git', '-C', $_, 'pull' }
+        else {
+            if repos{$_}:exists {
+                run 'git', 'clone', repos{$_}, $_;
+            }
+            else {
+                say "cannot clone unknown repository '$_'";
+            }
+        }
+    }
+}
+
+#| run tests in repositories if available
+multi MAIN('test', *@REPO) {
+    for @REPO {
+        unless "$DIR/$_/t".IO.d {
+            say "'$_' does not have tests";
+            next;
+        }
+
+        shell "cd $DIR/$_ && prove -r -e \"perl6 -I../.blib\" t/";
+    }
+}
+
+#| update all installed repositories and rebuild
+multi MAIN('upgrade') {
+    for repos.keys {
+        if "$DIR/$_".IO.d {
+            say "-- $_:";
+            run 'git', '-C', $_, 'pull'
+        }
+    }
+
+    MAIN 'rebuild';
+}
+
+#| remove bytecode directory
+multi MAIN('nuke') { run 'rm', '-rf', '.blib/' }
