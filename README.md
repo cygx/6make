@@ -23,3 +23,25 @@ scan    -- rescan installed repostories, but don't compile
 pull    -- git pull every installed repository
 clean   -- nuke blib/
 ```
+
+6make usage:
+
+```
+Usage:
+  ./6make scan
+  ./6make add [<METAINFO> ...]
+  ./6make --batch add <LIST>
+  ./6make ecosync
+```
+
+The `scan` subcommand needs to be run manually once to generate the Makefile.
+After that, you'll normally use it indirectly via `make scan` and `make 6`.
+
+The `add` subcommand expects a list of paths or URLs to Perl6 `META.info` or
+`META6.json` files, scanning them for `name` and `source-url` entries to add
+to `repo.list`.
+
+If `--batch` is passed, the list is taken from a file instead of the argument
+list.
+
+The `ecosync` subcommand batch adds the whole *modules.perl6.org* `META.list`.
