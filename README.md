@@ -10,6 +10,7 @@ Example commands for installing `JSON::Tiny`:
 ./6make scan
 
 make json-tiny 6
+make t-json-tiny
 ```
 
 Dependencies have to be resolved manually.
@@ -17,14 +18,26 @@ Dependencies have to be resolved manually.
 Builtin make targets:
 
 ```
-6       -- rescan installed repositories and compile bytecode to blib/
-bc      -- compile bytecode as necessary, but don't rescan [DEFAULT TARGET]
-scan    -- rescan installed repostories, but don't compile
-pull    -- git pull every installed repository
-clean   -- nuke blib/
+6        -- rescan installed repositories and compile bytecode to blib/
+bc       -- compile bytecode as necessary, but don't rescan [DEFAULT TARGET]
+scan     -- rescan installed repostories, but don't compile
+pull     -- git pull every installed repository
+clean    -- nuke blib/
+fulltest -- run tests of all installed modules
 ```
 
-6make usage:
+Additionally, each module comes with the following set of targets:
+
+```
+name-of-module      -- git clone the repository if necessary
+pull-name-of-module -- git pull an already cloned repository
+t-name-of-module    -- run tests in module's t/ directory if present
+
+```
+
+All module names are lower-case, with a single `-` replacing each `::`.
+
+In addition to the Makefile, there's also `6make` with following usage:
 
 ```
 Usage:
