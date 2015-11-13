@@ -38,7 +38,7 @@ log-end;
 
 log-start 'finding modules';
 my @libdirs = @repos.map({ "{.[0]}/lib" });
-my @modules = find(:noerr, :f, :name<*.pm *.pm6>, @libdirs);
+my @modules = find(:noerr, :f, :name<*.pm *.pm6>, @libdirs) if @libdirs;
 log-end;
 
 log-start 'parsing modules';
