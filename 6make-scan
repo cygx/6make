@@ -32,7 +32,7 @@ class PM {
 my @builtins = <v6 nqp MONKEY-TYPING Test NativeCall NQPHLL>;
 
 log-start 'reading repo.list';
-my @repos = 'repo.list'.IO.lines.map({ [ .split(/\h+/, 2) ] });
+my @repos = 'repo.list'.IO.lines.map({ [ .comb(/\H+/) ] });
 log-end;
 
 log-start 'looking for modules';
