@@ -1,7 +1,8 @@
 #!/usr/bin/env perl6
 
 my $start = BEGIN now;
-my $end;
+
+use nqp;
 
 sub log-start($info) {
     print "    $info...", (' ' x (20 - $info.chars));
@@ -9,7 +10,7 @@ sub log-start($info) {
 }
 
 sub log-end {
-    $end = now;
+    my $end = now;
     printf "[ %5.2fs ]\n", $end - $start;
     $start = Nil;
 }
@@ -41,16 +42,22 @@ my @modules = find(:noerr, :f, :name<*.pm *.pm6>, @libdirs);
 log-end;
 
 log-start 'parsing modules';
-my %registry = @modules.map: {
-    my ($repo, $path) = .split('/lib/', 2);
+my %registry = @modules.map: -> $pm {
+    my ($repo, $path) = $pm.split('/lib/', 2);
     my $name = $path.subst(/\.pm6?$/, '').subst(:g, '/', '::');
-    my $deps = .IO.lines.map({
-        next if /^'=begin pod'/ ff /^'=end pod'/;
-        when /^\h*[use|need]\h+([\w+]+ % '::')/ { ~$0 }
-        default { Empty }
-    }).grep(none @builtins);
 
-    $name => PM.new(:$name, :$repo, :$path, :$deps);
+    my @deps;
+    my $fh := nqp::open(nqp::unbox_s($pm), 'r');
+    repeat until nqp::eoffh($fh) {
+        $_ := nqp::readlinefh($fh);
+        if (not .starts-with('=begin pod') ff .starts-with('=end pod'))
+            && /^\h*[use|need]\h+([\w+]+ % '::')/ {
+            my $dep := ~$0;
+            @deps.push($dep) unless $dep ~~ any @builtins;
+        }
+    }
+
+    $name => PM.new(:$name, :$repo, :$path, :@deps);
 }
 log-end;
 
