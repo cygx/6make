@@ -9,7 +9,7 @@ Example commands for installing `JSON::Tiny`:
 ./6make ecosync
 ./6make scan
 
-make json-tiny 6 bc
+make json-tiny 6
 ```
 
 Dependencies have to be resolved manually.
@@ -17,9 +17,9 @@ Dependencies have to be resolved manually.
 Builtin make targets:
 
 ```
-6       -- rescan installed repositories for dependencies
-bc      -- compile bytecode as necessary into blib/ [DEFAULT TARGET]
+6       -- rescan installed repositories and compile bytecode to blib/
+bc      -- compile bytecode as necessary, but don't rescan [DEFAULT TARGET]
+scan    -- rescan installed repostories, but don't compile
 pull    -- git pull every installed repository
 clean   -- nuke blib/
-upgrade -- alias for `make pull 6 bc`
 ```

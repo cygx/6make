@@ -53,13 +53,12 @@ pull: \$(REPOS:\%=pull-%)
 \$(REPOS:\%=pull-%):
 \t\$(PULL)
 
-upgrade: pull
-\t./6make-scan
-\t@\$(MAKE) --no-print-directory bc
-
 clean:; rm -rf blib
 
-6:; ./6make-scan
+scan:; ./6make-scan
+
+6: scan
+\t@\$(MAKE) --no-print-directory bc
 
 {
     join "\n", do for @repos -> [ $name, $url ] {
