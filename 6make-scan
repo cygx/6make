@@ -35,6 +35,8 @@ my %registry = @$files.race.map: {
     $name => PM.new(:$name, :$repo, :$path, :$deps);
 }
 
+my $missing = False;
+
 say '    writing Makefile';
 'Makefile'.IO.spurt: qq:to/__END__/;
 COMPILE = perl6 -Iblib --target=mbc --output=\$@ \$<
@@ -74,6 +76,7 @@ scan:; ./6make-scan
                 "blib/{%registry{$_}.path}.moarvm";
             }
             else {
+                $missing = True;
                 note "missing dependency $_ for {$pm.name}";
                 '';
             }
@@ -83,3 +86,5 @@ scan:; ./6make-scan
     }
 }
 __END__
+
+exit +$missing;
