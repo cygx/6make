@@ -33,13 +33,17 @@ sub load-ecolist($_ = "$DIR/eco.list") {
     .IO.lines.SetHash;
 }
 
-sub libdirs(%repos) { %repos.keys.map({ "$_/lib" }) }
+sub libdirs(%repos) { %repos.keys.map({ "$DIR/$_/lib" }) }
 
 sub find-modules(@dirs) {
     ENTER my $start = now;
     LEAVE note "found modules in { round now - $start, .01 }s";
-    qqx{find @dirs[] -type f \\( -name '*.pm' -o -name '*.pm6' \\) 2>$DEVNULL}
-        . lines;
+
+    my $err = open $DEVNULL, :w;
+    LEAVE $err.?close;
+
+    run('find', |@dirs, |<-type f \( -name *.pm -o -name *.pm6 \)>,
+        :out, :$err).out.slurp-rest.lines;
 }
 
 sub parse-modules(@files) {
@@ -272,4 +276,4 @@ multi MAIN('upgrade') {
 }
 
 #| remove bytecode directory
-multi MAIN('nuke') { run 'rm', '-rf', '.blib/' }
+multi MAIN('nuke') { run 'rm', '-rf', "$DIR/.blib/" }
