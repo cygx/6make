@@ -223,6 +223,8 @@ multi MAIN('get', *@repos) {
             }
         }
     }
+
+    MAIN 'scan'
 }
 
 #| scan repositories for dependencies
