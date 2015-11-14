@@ -33,17 +33,16 @@ sub load-ecolist($_ = "$DIR/eco.list") {
     .IO.lines.SetHash;
 }
 
-sub libdirs(%repos) { %repos.keys.map({ "$DIR/$_/lib" }) }
-
-sub find-modules(@dirs) {
+sub find-modules($_ = $DIR) {
     ENTER my $start = now;
     LEAVE note "found modules in { round now - $start, .01 }s";
 
-    my $err = open $DEVNULL, :w;
-    LEAVE $err.?close;
+    ENTER my $cwd = $*CWD;
+    LEAVE $*CWD = $cwd;
+    $*CWD = $_;
 
-    run('find', |@dirs, |<-type f \( -name *.pm -o -name *.pm6 \)>,
-        :out, :$err).out.slurp-rest.lines;
+    run(< find -name .git -prune -false -o -type f >, :out)\
+        .out.slurp-rest.lines.grep(/ '/lib/' .+ \.pm6? $/);
 }
 
 sub parse-modules(@files) {
@@ -55,7 +54,7 @@ sub parse-modules(@files) {
         my $name = $path.subst(/\.pm6?$/, '').subst(:g, '/', '::');
 
         my @deps;
-        my $fh := nqp::open(nqp::unbox_s($pm), 'r');
+        my $fh := nqp::open(nqp::unbox_s("$DIR/$pm"), 'r');
         repeat until nqp::eoffh($fh) {
             $_ := nqp::readlinefh($fh);
             if (not .starts-with('=begin pod') ff .starts-with('=end pod'))
@@ -136,7 +135,7 @@ sub ecos {
     }
 }
 
-sub pms { once parse-modules find-modules libdirs repos }
+sub pms { once parse-modules find-modules }
 
 #| an alias for the 'build' subcommand
 multi MAIN { MAIN 'build' }
