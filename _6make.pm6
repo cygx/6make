@@ -213,10 +213,11 @@ multi MAIN('add', Str $name, Str $url) {
 #| clone or pull repositories via git, then scan
 multi MAIN('get', *@repos) {
     for @repos {
-        if .IO.d { run 'git', '-C', $_, 'pull' }
+        my $path = "$DIR/$_";
+        if $path.IO.d { run 'git', '-C', $path, 'pull' }
         else {
             if repos{$_}:exists {
-                run 'git', 'clone', repos{$_}, $_;
+                run 'git', 'clone', repos{$_}, $path;
             }
             else {
                 say "cannot clone unknown repository '$_'";
@@ -260,9 +261,10 @@ multi MAIN('test', *@repos) {
 #| update all installed repositories and rebuild
 multi MAIN('upgrade') {
     for repos.keys {
-        if "$DIR/$_".IO.d {
+        my $path = "$DIR/$_";
+        if $path.IO.d {
             say "-- $_:";
-            run 'git', '-C', $_, 'pull'
+            run 'git', '-C', $path, 'pull'
         }
     }
 
