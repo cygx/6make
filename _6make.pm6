@@ -180,25 +180,15 @@ multi MAIN('ecosync') {
     dump-ecolist(ecos => ecos);
 }
 
-#| scan repositories and compile to bytecode
-multi MAIN('rebuild') {
-    MAIN 'scan';
-    MAIN 'build';
-}
-
-#| only scan repositories (but don't compile to bytecode)
-multi MAIN('scan') {
-    my @missing;
-    dump-makefile :pms(pms), :@missing;
-    for @missing {
-        say "missing dependency {.[0]} for {.[1]}"
+#| list repository names matching all <strings>
+multi MAIN('list', *@strings) {
+    SEARCH: for repos.keys -> $name {
+        $name.index(.lc) // SEARCH.next for @strings;
+        say $name, "$DIR/$name".IO.d ?? ' [ INSTALLED ]' !! '';
     }
 }
 
-#| only compile to bytecode (but don't scan repositories)
-multi MAIN('build') { run 'make', '-C', $DIR, '--no-print-directory' }
-
-#| add repository at URL as NAME
+#| add repository at <url> as <name>
 multi MAIN('add', Str $name, Str $url) {
     my $repo = $name.lc.subst(:g, '::', '-');
     say "normalized name to '$repo'" if $repo ne $name;
@@ -235,6 +225,24 @@ multi MAIN('get', *@repos) {
     }
 }
 
+#| scan repositories for dependencies
+multi MAIN('scan') {
+    my @missing;
+    dump-makefile :pms(pms), :@missing;
+    for @missing {
+        say "missing dependency {.[0]} for {.[1]}"
+    }
+}
+
+#| compile modules to bytecode
+multi MAIN('build') { run 'make', '-C', $DIR, '--no-print-directory' }
+
+#| scan repositories and compile to bytecode
+multi MAIN('rebuild') {
+    MAIN 'scan';
+    MAIN 'build';
+}
+
 #| run tests in repositories if available
 multi MAIN('test', *@repos) {
     for @repos {
@@ -261,11 +269,3 @@ multi MAIN('upgrade') {
 
 #| remove bytecode directory
 multi MAIN('nuke') { run 'rm', '-rf', '.blib/' }
-
-#| list known repositories that contain all given strings
-multi MAIN('list', *@strings) {
-    SEARCH: for repos.keys -> $name {
-        $name.index(.lc) // SEARCH.next for @strings;
-        say $name, "$DIR/$name".IO.d ?? ' [ INSTALLED ]' !! '';
-    }
-}

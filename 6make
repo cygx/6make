@@ -11,3 +11,5 @@ BEGIN shell "perl6 --target=mbc --output=$BC $PM"
 
 use lib $DIR;
 use _6make;
+
+my $*PROGRAM-NAME := '6make';
