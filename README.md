@@ -1,9 +1,9 @@
 # 6make
 
-Manages and precompiles Perl6 modules via GNU `make` and `git`. It currently
+Manages and precompiles Perl6 modules via `git` and GNU `make`. It currently
 also depends on `find` and `wget`.
 
-Example commands for installing `JSON::Tiny` (**note:** module names are
+Example commands for installing `JSON::Tiny` (*note:* module names are
 lower-cased, with a single `-` replacing each `::`):
 
 ```
