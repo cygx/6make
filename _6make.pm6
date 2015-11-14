@@ -199,21 +199,21 @@ multi MAIN('scan') {
 multi MAIN('build') { run 'make', '-C', $DIR, '--no-print-directory' }
 
 #| add repository at URL as NAME
-multi MAIN('add', Str $NAME, Str $URL) {
-    my $repo = $NAME.lc.subst(:g, '::', '-');
-    say "normalized name to '$repo'" if $repo ne $NAME;
+multi MAIN('add', Str $name, Str $url) {
+    my $repo = $name.lc.subst(:g, '::', '-');
+    say "normalized name to '$repo'" if $repo ne $name;
     my $former-url = repos{$repo};
 
     if !defined $former-url {
-        repos{$repo} = $URL;
+        repos{$repo} = $url;
     }
-    elsif $former-url eq $URL {
+    elsif $former-url eq $url {
         say "repository '$repo' is already known under that address";
         return;
     }
     else {
         say "former address was <$former-url>";
-        repos{$repo} = $URL;
+        repos{$repo} = $url;
     }
 
     dump-repolist :repos(repos);
@@ -221,8 +221,8 @@ multi MAIN('add', Str $NAME, Str $URL) {
 }
 
 #| clone or pull repositories via git
-multi MAIN('get', *@REPO) {
-    for @REPO {
+multi MAIN('get', *@repos) {
+    for @repos {
         if .IO.d { run 'git', '-C', $_, 'pull' }
         else {
             if repos{$_}:exists {
@@ -236,8 +236,8 @@ multi MAIN('get', *@REPO) {
 }
 
 #| run tests in repositories if available
-multi MAIN('test', *@REPO) {
-    for @REPO {
+multi MAIN('test', *@repos) {
+    for @repos {
         unless "$DIR/$_/t".IO.d {
             say "'$_' does not have tests";
             next;
@@ -261,3 +261,11 @@ multi MAIN('upgrade') {
 
 #| remove bytecode directory
 multi MAIN('nuke') { run 'rm', '-rf', '.blib/' }
+
+#| list known repositories that contain all given strings
+multi MAIN('list', *@strings) {
+    SEARCH: for repos.keys -> $name {
+        $name.index(.lc) // SEARCH.next for @strings;
+        say $name, "$DIR/$name".IO.d ?? ' [ INSTALLED ]' !! '';
+    }
+}
