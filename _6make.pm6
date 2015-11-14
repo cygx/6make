@@ -150,7 +150,7 @@ multi MAIN('ecosync') {
 
     repos, ecos;
 
-    for @lines -> $target {
+    for @lines.grep(/\S/) -> $target {
         ++$n;
         if ecos{$target}:exists {
             ++$skipped;
