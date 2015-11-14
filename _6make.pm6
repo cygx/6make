@@ -2,7 +2,7 @@ use nqp;
 
 proto MAIN(|) is export {*}
 
-my constant $DIR = %*ENV<SIXMAKEDIR>;
+my constant $DIR = $*PROGRAM.parent.abspath;
 my constant $DEVNULL = $*SPEC.devnull;
 my constant $ECOSYSTEM =
     'https://raw.githubusercontent.com/perl6/ecosystem/master/META.list';

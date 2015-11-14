@@ -2,14 +2,12 @@
 
 note "loaded script in { (now - BEGIN now).round(0.01) }s";
 
-my constant $DIR = $?FILE.IO.parent.abspath;
+my constant $DIR = $*PROGRAM.parent.abspath;
 my constant $PM = "$DIR/_6make.pm6";
 my constant $BC = "$PM.moarvm";
 
-BEGIN if !$BC.IO.f || $PM.IO.modified > $BC.IO.modified {
-    %*ENV<SIXMAKEDIR> = $DIR;
-    shell "perl6 --target=mbc --output=$BC $PM";
-}
+BEGIN shell "perl6 --target=mbc --output=$BC $PM"
+    if !$BC.IO.f || $PM.IO.modified > $BC.IO.modified;
 
 use lib $DIR;
 use _6make;
