@@ -210,7 +210,7 @@ multi MAIN('add', Str $name, Str $url) {
     say "repository '$repo' has been added";
 }
 
-#| clone or pull repositories via git
+#| clone or pull repositories via git, then scan
 multi MAIN('get', *@repos) {
     for @repos {
         if .IO.d { run 'git', '-C', $_, 'pull' }
@@ -239,7 +239,7 @@ multi MAIN('scan') {
 #| compile modules to bytecode
 multi MAIN('build') { run 'make', '-C', $DIR, '--no-print-directory' }
 
-#| scan repositories and compile to bytecode
+#| scan repositories, then compile to bytecode
 multi MAIN('rebuild') {
     MAIN 'scan';
     MAIN 'build';

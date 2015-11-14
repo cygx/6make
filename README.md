@@ -1,60 +1,34 @@
 # 6make
 
-Precompiles Perl6 modules via GNU `make`. It currently also depends on `find`
-and `wget`.
+Manages and precompiles Perl6 modules via GNU `make` and `git`. It currently
+also depends on `find` and `wget`.
 
-Example commands for installing `JSON::Tiny`:
-
-```
-./6make ecosync
-./6make scan
-
-make json-tiny 6
-make t-json-tiny
-```
-
-Dependencies have to be resolved manually.
-
-Builtin make targets:
+Example commands for installing `JSON::Tiny` (**note:** module names are
+lower-cased, with a single `-` replacing each `::`):
 
 ```
-6        -- rescan installed repositories and compile bytecode to blib/
-bc       -- compile bytecode as necessary, but don't rescan [DEFAULT TARGET]
-scan     -- rescan installed repostories, but don't compile
-pull     -- git pull every installed repository
-clean    -- nuke blib/
-fulltest -- run tests of all installed modules
+6make ecosync        # go get some coffee, this takes a while
+6make get json-tiny
+6make
+6make test json-tiny
 ```
 
-Additionally, each module comes with the following set of targets:
+The compiled module files end up in `.blib/`, which can be added to the
+`PERL6LIB` environment variable or manually passed via `-I`.
 
-```
-name-of-module      -- git clone the repository if necessary
-pull-name-of-module -- git pull an already cloned repository
-t-name-of-module    -- run tests in module's t/ directory if present
-
-```
-
-All module names are lower-case, with a single `-` replacing each `::`.
-
-In addition to the Makefile, there's also `6make` with following usage:
+The full list of subcommands is:
 
 ```
 Usage:
-  ./6make scan
-  ./6make add [<METAINFO> ...]
-  ./6make --batch add <LIST>
-  ./6make ecosync
+  6make -- an alias for the 'build' subcommand
+  6make ecosync -- sync repo.list and eco.list with the ecosystem
+  6make list [<strings> ...] -- list repository names matching all <strings>
+  6make add <name> <url> -- add repository at <url> as <name>
+  6make get [<repos> ...] -- clone or pull repositories via git, then scan
+  6make scan -- scan repositories for dependencies
+  6make build -- compile modules to bytecode
+  6make rebuild -- scan repositories, then compile to bytecode
+  6make test [<repos> ...] -- run tests in repositories if available
+  6make upgrade -- update all installed repositories and rebuild
+  6make nuke -- remove .blib/ bytecode directory
 ```
-
-The `scan` subcommand needs to be run manually once to generate the Makefile.
-After that, you'll normally use it indirectly via `make scan` and `make 6`.
-
-The `add` subcommand expects a list of paths or URLs to Perl6 `META.info` or
-`META6.json` files, scanning them for `name` and `source-url` entries to add
-to `repo.list`.
-
-If `--batch` is passed, the list is taken from a file instead of the argument
-list.
-
-The `ecosync` subcommand batch adds the whole *modules.perl6.org* `META.list`.
