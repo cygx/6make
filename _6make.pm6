@@ -187,7 +187,7 @@ multi MAIN('ecosync') {
 multi MAIN('list', *@strings) {
     SEARCH: for repos.keys -> $name {
         $name.index(.lc) // SEARCH.next for @strings;
-        say $name, "$DIR/$name".IO.d ?? ' [ INSTALLED ]' !! '';
+        say "  $name", "$DIR/$name".IO.d ?? ' [ INSTALLED ]' !! '';
     }
 }
 
