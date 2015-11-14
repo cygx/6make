@@ -58,7 +58,7 @@ sub parse-modules(@files) {
         repeat until nqp::eoffh($fh) {
             $_ := nqp::readlinefh($fh);
             if (not .starts-with('=begin pod') ff .starts-with('=end pod'))
-                && /^\h*[use|need]\h+([\w+]+ % '::')/ {
+                && /^\h*[use|need]\h+([<[\w-]>+]+ % '::')/ {
                 my $dep := ~$0;
                 @deps.push($dep) unless $dep ~~ any
                     BEGIN <v6 nqp MONKEY-TYPING Test NativeCall NQPHLL>;
