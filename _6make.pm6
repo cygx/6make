@@ -61,7 +61,27 @@ sub parse-modules(@files, :$dir = $DIR) {
                 && /^\h*[use|need]\h+([<[\w-]>+]+ % '::')/ {
                 my $dep := ~$0;
                 @deps.push($dep) unless $dep ~~ any
-                    BEGIN <v6 nqp MONKEY-TYPING Test NativeCall NQPHLL>;
+                    BEGIN <
+                        v6
+                        lib
+                        nqp
+                        cur
+                        soft
+                        Test
+                        fatal
+                        trace
+                        NQPHLL
+                        strict
+                        newline
+                        worries
+                        invocant
+                        internals
+                        variables
+                        attributes
+                        NativeCall
+                        parameters
+                        MONKEY-TYPING
+                    >;
             }
         }
 
