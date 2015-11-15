@@ -45,7 +45,7 @@ sub find-modules($_ = $DIR) {
         .out.slurp-rest.lines.grep(/ '/lib/' .+ \.pm6? $/);
 }
 
-sub parse-modules(@files) {
+sub parse-modules(@files, :$dir = $DIR) {
     ENTER my $start = now;
     LEAVE note "parsed modules in { round now - $start, .01 }s";
 
@@ -54,7 +54,7 @@ sub parse-modules(@files) {
         my $name = $path.subst(/\.pm6?$/, '').subst(:g, '/', '::');
 
         my @deps;
-        my $fh := nqp::open(nqp::unbox_s("$DIR/$pm"), 'r');
+        my $fh := nqp::open(nqp::unbox_s("$dir/$pm"), 'r');
         repeat until nqp::eoffh($fh) {
             $_ := nqp::readlinefh($fh);
             if (not .starts-with('=begin pod') ff .starts-with('=end pod'))
@@ -69,7 +69,24 @@ sub parse-modules(@files) {
     }
 }
 
-sub dump-makefile($_ = "$DIR/Makefile", :%pms!, :@missing) {
+sub gen-deps(%pms, :@missing, :$blib = 'blib') {
+    join "\n", do for %pms.values {
+        my $pm = $_;
+        my $deps = .deps ?? .deps.map({
+            if %pms{$_} -> $_ {
+                "$blib/{.path}.moarvm";
+            }
+            else {
+                @missing.push(($_, $pm.name));
+                '';
+            }
+        }).join(' ') !! '';
+
+        "$blib/{.path}.moarvm: $blib/\%.moarvm: {.repo}/lib/% $deps";
+    }
+}
+
+sub dump-makefile($_ = "$DIR/Makefile", :%pms!, :@missing, :$blib = '.blib') {
     ENTER my $start = now;
     LEAVE note "generated Makefile in { (now - $start).round(0.01) }s";
 
@@ -79,24 +96,9 @@ BC := { %pms.values>>.path.map({ ".blib/$_.moarvm" }).join(' ') }
 bc: \$(BC)
 \$(BC):
 \t@mkdir -p \$(dir \$@)
-\tperl6 -I.blib --target=mbc --output=\$@ \$<
+\tperl6 -I$blib --target=mbc --output=\$@ \$<
 
-{
-    join "\n", do for %pms.values {
-        my $pm = $_;
-        my $deps = .deps ?? .deps.map({
-            if %pms{$_} -> $_ {
-                ".blib/{.path}.moarvm";
-            }
-            else {
-                @missing.push(($_, $pm.name));
-                '';
-            }
-        }).join(' ') !! '';
-
-        ".blib/{.path}.moarvm: .blib/\%.moarvm: {.repo}/lib/% $deps";
-    }
-}
+{ gen-deps %pms, :@missing, :$blib }
 __END__
 }
 
@@ -276,3 +278,8 @@ multi MAIN('upgrade') {
 
 #| remove bytecode directory
 multi MAIN('nuke') { run 'rm', '-rf', "$DIR/.blib/" }
+
+#| dump dependencies for modules in ./lib/ to stdout
+multi MAIN('deps') {
+    say gen-deps parse-modules :dir<.>, find-modules '.';
+}
