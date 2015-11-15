@@ -1,10 +1,11 @@
 # 6make
 
 Manages and precompiles Perl6 modules via `git` and GNU `make`. It currently
-also depends on `find` and `wget`.
+also depends on `find` and `wget`. Dependencies between modules are
+auto-detected so precompilation happens in proper order, but missing
+dependencies have to be resolved manually.
 
-Example commands for installing `JSON::Tiny` (*note:* module names are
-lower-cased, with a single `-` replacing each `::`):
+Example commands for installing `JSON::Tiny`:
 
 ```
 6make ecosync        # go get some coffee, this takes a while
@@ -13,10 +14,12 @@ lower-cased, with a single `-` replacing each `::`):
 6make test json-tiny
 ```
 
+Note that module names are lower-cased, with a single `-` replacing each `::`.
+
 The compiled module files end up in `.blib/`, which can be added to the
 `PERL6LIB` environment variable or manually passed via `-I`.
 
-The full list of subcommands is:
+The full list of 6make subcommands is:
 
 ```
 Usage:
