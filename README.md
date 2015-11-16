@@ -33,5 +33,6 @@ Usage:
   6make rebuild -- scan repositories, then compile to bytecode
   6make test [<repos> ...] -- run tests in repositories if available
   6make upgrade -- update all installed repositories and rebuild
-  6make nuke -- remove .blib/ bytecode directory
+  6make nuke -- remove bytecode directory
+  6make deps -- dump dependencies for modules in ./lib/ to stdout
 ```
