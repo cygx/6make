@@ -62,6 +62,7 @@ sub parse-modules(@files, :$dir = $DIR) {
                 my $dep := ~$0;
                 @deps.push($dep) unless $dep ~~ any
                     BEGIN <
+                        v5
                         v6
                         lib
                         nqp
@@ -71,6 +72,7 @@ sub parse-modules(@files, :$dir = $DIR) {
                         fatal
                         trace
                         NQPHLL
+                        QRegex
                         strict
                         newline
                         worries
@@ -80,7 +82,11 @@ sub parse-modules(@files, :$dir = $DIR) {
                         attributes
                         NativeCall
                         parameters
+                        NQPP5QRegex
+                        NQPP6QRegex
+                        Perl6::World
                         MONKEY-TYPING
+                        Perl6::Actions
                     >;
             }
         }
